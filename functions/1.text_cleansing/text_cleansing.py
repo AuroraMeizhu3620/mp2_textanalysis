@@ -1,7 +1,7 @@
-from functions.text_cleansing.load_text import load_text
-from functions.text_cleansing.to_lowercase import to_lowercase
-from functions.text_cleansing.remove_punctuation import remove_punctuation
-from functions.text_cleansing.tokenize import tokenize
+from load_text import load_text
+from lowercase import to_lowercase
+from remove_punctuation import remove_punctuation
+from tokenize import tokenize
 
 def text_cleansing(file_path):
     """

@@ -1,3 +1,6 @@
-from functions.text_cleansing.text_cleansing import text_cleansing
+import sys
+sys.path.insert(0, 'functions/1.text_cleansing')
+from text_cleansing import text_cleansing
 
-text_cleansing('data/sample.txt')
+result = text_cleansing('data/example.txt')
+print(result)
