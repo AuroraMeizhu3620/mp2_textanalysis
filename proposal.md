@@ -17,3 +17,11 @@ This project comes from the political thought idea of “who has the right to na
 - Whether I should start with pasted text or API-pulled articles.
 - How to define the list of “negative framing” words fairly.
 - How to compare articles without oversimplifying complex political language.
+
+# Function organization
+User pastes article text →
+App cleans the text →
+App counts key words →
+App detects framing words →
+App creates a chart →
+User compares Article A vs. Article B
