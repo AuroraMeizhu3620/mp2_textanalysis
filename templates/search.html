@@ -1,0 +1,61 @@
+{% extends "base.html" %}
+
+{% block content %}
+<section class="page-heading">
+    <p class="eyebrow">Source Collection</p>
+    <h1>Search free article sources</h1>
+    <p>Search GDELT by topic and source. If automatic article text fetching fails, open the link and paste the text on the analysis page.</p>
+</section>
+
+{% if error %}
+    <p class="message">{{ error }}</p>
+{% endif %}
+
+<form method="post" class="search-form dashboard-section">
+    <input type="hidden" name="action" value="search">
+
+    <label for="search_text">Topic or event</label>
+    <input id="search_text" name="search_text" value="{{ search_text }}" placeholder="Example: Gaza ceasefire protest">
+
+    <label for="source">Source</label>
+    <select id="source" name="source">
+        {% for source_name in sources %}
+            <option value="{{ source_name }}" {% if source_name == selected_source %}selected{% endif %}>
+                {{ source_name }}
+            </option>
+        {% endfor %}
+    </select>
+
+    <button class="primary-button" type="submit">Search</button>
+</form>
+
+{% if articles %}
+<section class="search-results">
+    <h2>Results</h2>
+
+    {% for article in articles %}
+        <article class="search-result">
+            <h3>{{ article.title }}</h3>
+            <p>{{ article.domain }}{% if article.date %} | {{ article.date }}{% endif %}</p>
+            <a href="{{ article.url }}" target="_blank" rel="noreferrer">Open article</a>
+
+            <form method="post">
+                <input type="hidden" name="action" value="fetch">
+                <input type="hidden" name="source" value="{{ selected_source }}">
+                <input type="hidden" name="search_text" value="{{ search_text }}">
+                <input type="hidden" name="article_url" value="{{ article.url }}">
+                <button type="submit">Try to fetch text</button>
+            </form>
+        </article>
+    {% endfor %}
+</section>
+{% endif %}
+
+{% if fetched_text %}
+<section class="fetched-text">
+    <h2>Fetched article text</h2>
+    <p><a href="{{ fetched_url }}" target="_blank" rel="noreferrer">Original article</a></p>
+    <textarea readonly>{{ fetched_text }}</textarea>
+</section>
+{% endif %}
+{% endblock %}

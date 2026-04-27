@@ -1,0 +1,52 @@
+<article class="result-card">
+    <div class="result-header">
+        <div>
+            <p class="eyebrow">Analyzed Text</p>
+            <h2>{{ article.title }}</h2>
+            <p class="source-line">{{ article.source }}</p>
+        </div>
+    </div>
+
+    <div class="mini-stats">
+        <div>
+            <span>Total words</span>
+            <strong>{{ article.framing.total_words }}</strong>
+        </div>
+        <div>
+            <span>Framing words</span>
+            <strong>{{ article.framing.total_framing_words }}</strong>
+        </div>
+        <div>
+            <span>Negative ratio</span>
+            <strong>{{ article.framing.negative_ratio }}%</strong>
+        </div>
+    </div>
+
+    <h3>Repeated Terms</h3>
+    {% if article.common_words %}
+        <div class="bar-list">
+            {% for word, count in article.common_words %}
+                <div class="bar-row">
+                    <span>{{ word }}</span>
+                    <div class="bar-track">
+                        <div class="bar-fill" style="width: {{ count * 12 }}px"></div>
+                    </div>
+                    <strong>{{ count }}</strong>
+                </div>
+            {% endfor %}
+        </div>
+    {% else %}
+        <p>No common words found.</p>
+    {% endif %}
+
+    <h3>Detected Framing Words</h3>
+    {% if article.framing.common_framing_words %}
+        <div class="tag-list">
+            {% for word, count in article.framing.common_framing_words %}
+                <span>{{ word }}: {{ count }}</span>
+            {% endfor %}
+        </div>
+    {% else %}
+        <p>No words from the current framing list were found.</p>
+    {% endif %}
+</article>

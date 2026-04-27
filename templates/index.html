@@ -1,0 +1,106 @@
+{% extends "base.html" %}
+
+{% block content %}
+<section class="page-heading">
+    <p class="eyebrow">Media Framing Research Dashboard</p>
+    <h1>Compare how articles narrate the same event</h1>
+    <p>Paste article text into one or both study panels. The dashboard cleans the text, counts repeated language, identifies framing words, and compares negative framing ratios.</p>
+</section>
+
+{% if error %}
+    <p class="message">{{ error }}</p>
+{% endif %}
+
+<form method="post" class="analysis-form dashboard-section">
+    <div class="section-heading">
+        <div>
+            <p class="eyebrow">Step 1</p>
+            <h2>Article Input Workspace</h2>
+        </div>
+        <a class="secondary-link" href="{{ url_for('search') }}">Search source articles</a>
+    </div>
+
+    <section class="article-inputs">
+        <div class="input-panel">
+            <div class="panel-title">
+                <span>A</span>
+                <h3>Article A</h3>
+            </div>
+            <label for="title_a">Title</label>
+            <input id="title_a" name="title_a" value="{{ request.form.get('title_a', '') }}">
+
+            <label for="source_a">Source</label>
+            <input id="source_a" name="source_a" value="{{ request.form.get('source_a', '') }}">
+
+            <label for="text_a">Article text</label>
+            <textarea id="text_a" name="text_a">{{ request.form.get('text_a', '') }}</textarea>
+        </div>
+
+        <div class="input-panel">
+            <div class="panel-title">
+                <span>B</span>
+                <h3>Article B</h3>
+            </div>
+            <label for="title_b">Title</label>
+            <input id="title_b" name="title_b" value="{{ request.form.get('title_b', '') }}">
+
+            <label for="source_b">Source</label>
+            <input id="source_b" name="source_b" value="{{ request.form.get('source_b', '') }}">
+
+            <label for="text_b">Article text</label>
+            <textarea id="text_b" name="text_b">{{ request.form.get('text_b', '') }}</textarea>
+        </div>
+    </section>
+
+    <div class="form-actions">
+        <button class="primary-button" type="submit">Run analysis</button>
+        <p>Use one article for a single-source reading or two articles for comparison.</p>
+    </div>
+</form>
+
+{% if comparison %}
+<section class="comparison-band dashboard-section">
+    <div class="section-heading">
+        <div>
+            <p class="eyebrow">Step 2</p>
+            <h2>Comparative Framing Metrics</h2>
+        </div>
+    </div>
+    <div class="stat-grid">
+        <div>
+            <span>Article A ratio</span>
+            <strong>{{ comparison.article_a_ratio }}%</strong>
+        </div>
+        <div>
+            <span>Article B ratio</span>
+            <strong>{{ comparison.article_b_ratio }}%</strong>
+        </div>
+        <div>
+            <span>Difference</span>
+            <strong>{{ comparison.difference }} points</strong>
+        </div>
+    </div>
+</section>
+{% endif %}
+
+{% if article_a or article_b %}
+<div class="section-heading results-heading">
+    <div>
+        <p class="eyebrow">Step 3</p>
+        <h2>Article-Level Findings</h2>
+    </div>
+</div>
+{% endif %}
+
+<section class="results-grid">
+    {% if article_a %}
+        {% set article = article_a %}
+        {% include "partials/article_result.html" with context %}
+    {% endif %}
+
+    {% if article_b %}
+        {% set article = article_b %}
+        {% include "partials/article_result.html" with context %}
+    {% endif %}
+</section>
+{% endblock %}
