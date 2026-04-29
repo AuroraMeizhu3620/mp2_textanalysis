@@ -3,16 +3,45 @@
 {% block content %}
 <section class="page-heading">
     <p class="eyebrow">Media Framing Research Dashboard</p>
-    <h1>Compare how articles narrate the same event</h1>
-    <p>Paste article text into one or both study panels. The dashboard cleans the text, counts repeated language, identifies framing words, and compares negative framing ratios.</p>
+    <h1>Analyze how articles narrate events</h1>
+    <p>Choose a mode below. The dashboard uses NLTK VADER for sentiment scoring, counts framing words, and can generate an AI summary via OpenAI.</p>
 </section>
 
 {% if error %}
     <p class="message">{{ error }}</p>
 {% endif %}
 
+{# Resolve form field values: use preload on GET, request.form on POST #}
+{% if request.method == 'GET' %}
+    {% set val_title_a  = preload_a.title  if preload_a else '' %}
+    {% set val_source_a = preload_a.source if preload_a else '' %}
+    {% set val_text_a   = preload_a.text   if preload_a else '' %}
+    {% set val_title_b  = preload_b.title  if preload_b else '' %}
+    {% set val_source_b = preload_b.source if preload_b else '' %}
+    {% set val_text_b   = preload_b.text   if preload_b else '' %}
+{% else %}
+    {% set val_title_a  = request.form.get('title_a',  '') %}
+    {% set val_source_a = request.form.get('source_a', '') %}
+    {% set val_text_a   = request.form.get('text_a',   '') %}
+    {% set val_title_b  = request.form.get('title_b',  '') %}
+    {% set val_source_b = request.form.get('source_b', '') %}
+    {% set val_text_b   = request.form.get('text_b',   '') %}
+{% endif %}
+
 <form method="post" class="analysis-form dashboard-section">
-    <div class="section-heading">
+    <input type="hidden" id="mode-input" name="mode" value="{{ mode }}">
+
+    <!-- Mode selector -->
+    <div class="mode-tabs">
+        <button type="button" id="tab-single" class="mode-tab" onclick="setMode('single')">
+            Single Article Analysis
+        </button>
+        <button type="button" id="tab-compare" class="mode-tab" onclick="setMode('compare')">
+            Compare Two Articles
+        </button>
+    </div>
+
+    <div class="section-heading" style="margin-top:18px;">
         <div>
             <p class="eyebrow">Step 1</p>
             <h2>Article Input Workspace</h2>
@@ -27,34 +56,34 @@
                 <h3>Article A</h3>
             </div>
             <label for="title_a">Title</label>
-            <input id="title_a" name="title_a" value="{{ request.form.get('title_a', '') }}">
+            <input id="title_a" name="title_a" value="{{ val_title_a }}">
 
             <label for="source_a">Source</label>
-            <input id="source_a" name="source_a" value="{{ request.form.get('source_a', '') }}">
+            <input id="source_a" name="source_a" value="{{ val_source_a }}">
 
             <label for="text_a">Article text</label>
-            <textarea id="text_a" name="text_a">{{ request.form.get('text_a', '') }}</textarea>
+            <textarea id="text_a" name="text_a">{{ val_text_a }}</textarea>
         </div>
 
-        <div class="input-panel">
+        <div class="input-panel" id="panel-b">
             <div class="panel-title">
                 <span>B</span>
                 <h3>Article B</h3>
             </div>
             <label for="title_b">Title</label>
-            <input id="title_b" name="title_b" value="{{ request.form.get('title_b', '') }}">
+            <input id="title_b" name="title_b" value="{{ val_title_b }}">
 
             <label for="source_b">Source</label>
-            <input id="source_b" name="source_b" value="{{ request.form.get('source_b', '') }}">
+            <input id="source_b" name="source_b" value="{{ val_source_b }}">
 
             <label for="text_b">Article text</label>
-            <textarea id="text_b" name="text_b">{{ request.form.get('text_b', '') }}</textarea>
+            <textarea id="text_b" name="text_b">{{ val_text_b }}</textarea>
         </div>
     </section>
 
     <div class="form-actions">
         <button class="primary-button" type="submit">Run analysis</button>
-        <p>Use one article for a single-source reading or two articles for comparison.</p>
+        <p id="mode-hint"></p>
     </div>
 </form>
 
@@ -63,36 +92,64 @@
     <div class="section-heading">
         <div>
             <p class="eyebrow">Step 2</p>
-            <h2>Comparative Framing Metrics</h2>
+            <h2>Comparative Metrics</h2>
         </div>
     </div>
+
+    <p class="comparison-label">Framing word ratio</p>
     <div class="stat-grid">
         <div>
-            <span>Article A ratio</span>
+            <span>Article A</span>
             <strong>{{ comparison.article_a_ratio }}%</strong>
         </div>
         <div>
-            <span>Article B ratio</span>
+            <span>Article B</span>
             <strong>{{ comparison.article_b_ratio }}%</strong>
         </div>
         <div>
             <span>Difference</span>
-            <strong>{{ comparison.difference }} points</strong>
+            <strong>{{ comparison.difference }} pts</strong>
         </div>
     </div>
+
+    <p class="comparison-label">VADER sentiment score (−1 to +1)</p>
+    <div class="stat-grid">
+        <div>
+            <span>Article A</span>
+            <strong class="{{ 'negative-val' if comparison.article_a_compound < -0.05 else 'positive-val' if comparison.article_a_compound > 0.05 else '' }}">
+                {{ comparison.article_a_compound }}
+            </strong>
+        </div>
+        <div>
+            <span>Article B</span>
+            <strong class="{{ 'negative-val' if comparison.article_b_compound < -0.05 else 'positive-val' if comparison.article_b_compound > 0.05 else '' }}">
+                {{ comparison.article_b_compound }}
+            </strong>
+        </div>
+        <div>
+            <span>Difference</span>
+            <strong>{{ comparison.sentiment_difference }}</strong>
+        </div>
+    </div>
+
+    {% if comparison.more_negative %}
+    <p class="comparison-note">
+        Article {{ comparison.more_negative }} carries more negative sentiment according to VADER.
+    </p>
+    {% endif %}
 </section>
 {% endif %}
 
 {% if article_a or article_b %}
 <div class="section-heading results-heading">
     <div>
-        <p class="eyebrow">Step 3</p>
-        <h2>Article-Level Findings</h2>
+        <p class="eyebrow">{{ 'Step 2' if not comparison else 'Step 3' }}</p>
+        <h2>{{ 'Analysis Report' if not article_b else 'Article-Level Findings' }}</h2>
     </div>
 </div>
 {% endif %}
 
-<section class="results-grid">
+<section class="results-grid {{ 'results-single' if not article_b else '' }}">
     {% if article_a %}
         {% set article = article_a %}
         {% include "partials/article_result.html" with context %}
@@ -103,4 +160,30 @@
         {% include "partials/article_result.html" with context %}
     {% endif %}
 </section>
+
+<script>
+function setMode(mode) {
+    document.getElementById('mode-input').value = mode;
+    var panelB = document.getElementById('panel-b');
+    var hint   = document.getElementById('mode-hint');
+    var tabS   = document.getElementById('tab-single');
+    var tabC   = document.getElementById('tab-compare');
+
+    if (mode === 'compare') {
+        panelB.style.display = '';
+        tabS.classList.remove('active');
+        tabC.classList.add('active');
+        hint.textContent = 'Fill both panels to compare, or just Article A for a one-sided report.';
+    } else {
+        panelB.style.display = 'none';
+        tabS.classList.add('active');
+        tabC.classList.remove('active');
+        hint.textContent = 'Analyze a single article for a detailed sentiment report.';
+    }
+}
+
+document.addEventListener('DOMContentLoaded', function () {
+    setMode(document.getElementById('mode-input').value);
+});
+</script>
 {% endblock %}

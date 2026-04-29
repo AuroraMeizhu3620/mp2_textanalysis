@@ -1,0 +1,141 @@
+{% extends "base.html" %}
+
+{% block content %}
+<section class="page-heading">
+    <p class="eyebrow">Saved Articles</p>
+    <h1>Collection</h1>
+    <p>Tag articles after analysis to group and compare them here. Articles sharing a tag are plotted together to reveal which direction each source leans.</p>
+</section>
+
+{% if saved_title %}
+<p class="message">&#10003; &nbsp;"{{ saved_title }}" saved to collection.</p>
+{% endif %}
+
+<!-- ── Tag browser ──────────────────────────────────── -->
+{% if tags %}
+<div class="tag-browser dashboard-section">
+    <p class="ai-block-label" style="margin-bottom:14px;">Browse by tag</p>
+    <div class="tag-pills">
+        {% for tag, count in tags %}
+        <a href="{{ url_for('collection', tag=tag) }}"
+           class="tag-pill {{ 'tag-pill-active' if tag == selected_tag else '' }}">
+            {{ tag }}
+            <span class="tag-count">{{ count }}</span>
+        </a>
+        {% endfor %}
+    </div>
+</div>
+{% else %}
+<div class="empty-state dashboard-section">
+    <p>No articles saved yet. Analyze an article and use the <strong>Save to collection</strong> form at the bottom of the result to add it here.</p>
+</div>
+{% endif %}
+
+<!-- ── Tag comparison view ──────────────────────────── -->
+{% if selected_tag and articles %}
+<div class="comparison-section">
+    <div class="section-heading" style="margin-top:28px; margin-bottom:20px;">
+        <div>
+            <p class="eyebrow">Tag: {{ selected_tag }}</p>
+            <h2>Bias Comparison &mdash; {{ articles | length }} article{{ 's' if articles | length != 1 else '' }}</h2>
+        </div>
+    </div>
+
+    <!-- Dot-strip chart ─────────────────────────────── -->
+    {% set chart_articles = articles | selectattr('sentiment_compound') | list %}
+    {% if chart_articles %}
+    <div class="chart-card dashboard-section">
+        <p class="ai-block-label" style="margin-bottom:4px;">Overall tone spectrum</p>
+        <p class="chart-subtitle">Each dot is one article. Position shows VADER sentiment (left = negative, right = positive). Color shows AI-identified bias direction.</p>
+
+        <div class="dot-chart">
+            <!-- Axis line and edge labels -->
+            <div class="dc-axis-line"></div>
+            <div class="dc-center-tick"></div>
+            <span class="dc-edge-label dc-edge-left">&#8592; Negative</span>
+            <span class="dc-edge-label dc-edge-center">Neutral</span>
+            <span class="dc-edge-label dc-edge-right">Positive &#8594;</span>
+
+            {% for article in articles %}
+            {% if article.sentiment_compound is not none %}
+            {# Map compound (-1..+1) to 3%..97% to keep dots away from edges #}
+            {% set x = ((article.sentiment_compound + 1) / 2 * 94 + 3) | round(1) %}
+            {% set up = loop.index0 % 2 == 0 %}
+            {% if article.ai_analysis and article.ai_analysis.parties and article.ai_analysis.parties | length >= 2 %}
+                {% set dot_tone = article.ai_analysis.parties[0].tone %}
+            {% else %}
+                {% set dot_tone = 'neutral' %}
+            {% endif %}
+            <div class="dc-point {{ 'dc-up' if up else 'dc-down' }}"
+                 style="left: {{ x }}%;"
+                 title="{{ article.title }}">
+                <div class="dc-circle dc-circle-{{ dot_tone }}"></div>
+                <div class="dc-stem"></div>
+                <div class="dc-label">
+                    <span class="dc-title">{{ article.title[:40] }}{% if article.title | length > 40 %}…{% endif %}</span>
+                    {% if article.ai_analysis and article.ai_analysis.favored_party %}
+                    <span class="dc-favors">&#8594; {{ article.ai_analysis.favored_party }}</span>
+                    {% endif %}
+                </div>
+            </div>
+            {% endif %}
+            {% endfor %}
+        </div>
+
+        <!-- Legend -->
+        <div class="chart-legend">
+            <span class="legend-item"><span class="legend-dot legend-favorable"></span> Favorable coverage of that party</span>
+            <span class="legend-item"><span class="legend-dot legend-neutral"></span> Neutral</span>
+            <span class="legend-item"><span class="legend-dot legend-unfavorable"></span> Unfavorable coverage</span>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Per-article party breakdown bars ────────────── -->
+    <div class="breakdown-chart dashboard-section">
+        <p class="ai-block-label" style="margin-bottom:16px;">Party coverage per article</p>
+        <p class="chart-subtitle" style="margin-bottom:20px;">Each bar shows how favorably (+) or unfavorably (−) each identified party is covered. Longer green = more favorable; shorter / red = more unfavorable.</p>
+
+        {% for article in articles %}
+        <div class="bc-row">
+            <div class="bc-article-info">
+                <strong class="bc-title">{{ article.title[:50] }}{% if article.title | length > 50 %}…{% endif %}</strong>
+                <span class="bc-source">{{ article.source }}</span>
+                {% if article.ai_analysis and article.ai_analysis.favored_party %}
+                <span class="bc-verdict">Favors: <strong>{{ article.ai_analysis.favored_party }}</strong></span>
+                {% endif %}
+            </div>
+
+            {% if article.ai_analysis and article.ai_analysis.parties and article.ai_analysis.parties | length >= 2 %}
+            <div class="bc-bars">
+                {% for party in article.ai_analysis.parties %}
+                <div class="bc-party-row">
+                    <span class="bc-party-name">{{ party.name[:35] }}{% if party.name | length > 35 %}…{% endif %}</span>
+                    <div class="bc-bar-track">
+                        {# marker_pct: 0%=unfavorable, 50%=neutral, 100%=favorable #}
+                        <div class="bc-center-line"></div>
+                        <div class="bc-bar-fill bc-{{ party.tone }}"
+                             style="width: {{ party.marker_pct }}%;"></div>
+                    </div>
+                    <span class="bc-score {{ party.tone }}">{{ '%+.2f' | format(party.favorability) }}</span>
+                </div>
+                {% endfor %}
+            </div>
+            {% else %}
+            <p class="muted-note" style="margin:0;">No AI party analysis available for this article.</p>
+            {% endif %}
+
+            <form class="bc-delete-form" method="post"
+                  action="{{ url_for('delete_article', article_id=article.id) }}">
+                <input type="hidden" name="tag" value="{{ selected_tag }}">
+                <button class="delete-btn" type="submit" title="Remove from collection">&times;</button>
+            </form>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+
+{% elif selected_tag %}
+<p class="message" style="margin-top:24px;">No articles saved under the tag "{{ selected_tag }}" yet.</p>
+{% endif %}
+{% endblock %}

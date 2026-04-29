@@ -1,32 +1,16 @@
-from load_text import load_text
+import nltk
+from nltk.tokenize import word_tokenize
+
+nltk.download("punkt", quiet=True)
+nltk.download("punkt_tab", quiet=True)
 
 
 def clean_text(text):
     """
-    Clean pasted text and return a list of words.
+    Tokenize and clean article text using NLTK.
 
-    Steps:
-    1. make the text lowercase
-    2. remove punctuation
-    3. split the text into words
+    Uses word_tokenize for accurate handling of contractions and punctuation,
+    then keeps only alphabetic tokens lowercased.
     """
-    text = text.lower()
-
-    cleaned_text = ""
-
-    for char in text:
-        if char.isalnum() or char.isspace():
-            cleaned_text += char
-
-    words = cleaned_text.split()
-
-    return words
-
-
-def text_cleansing(file_path):
-    """
-    Load text from a file, clean it, and return a list of words.
-    This keeps the original file-based function working.
-    """
-    text = load_text(file_path)
-    return clean_text(text)
+    tokens = word_tokenize(text.lower())
+    return [token for token in tokens if token.isalpha()]

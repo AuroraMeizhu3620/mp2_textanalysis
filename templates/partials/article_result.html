@@ -1,4 +1,6 @@
 <article class="result-card">
+
+    <!-- ── Header ──────────────────────────────────── -->
     <div class="result-header">
         <div>
             <p class="eyebrow">Analyzed Text</p>
@@ -7,7 +9,145 @@
         </div>
     </div>
 
-    <div class="mini-stats">
+    <!-- ── AI Framing Analysis ──────────────────────── -->
+    {% if article.ai_analysis %}
+    {% set ai = article.ai_analysis %}
+
+    <section class="ai-analysis-block">
+
+        <!-- Summary -->
+        {% if ai.summary %}
+        <div class="ai-summary">
+            <p class="ai-block-label">Summary</p>
+            <p class="summary-text">{{ ai.summary }}</p>
+        </div>
+        {% endif %}
+
+        <!-- Bilateral party coverage -->
+        {% if ai.parties and ai.parties | length >= 2 %}
+        {% set party_a = ai.parties[0] %}
+        {% set party_b = ai.parties[1] %}
+
+        <div class="bilateral-section">
+            <p class="ai-block-label">Party Coverage</p>
+
+            <!-- Party A -->
+            <div class="party-block party-a-block">
+                <div class="party-top">
+                    <div class="party-name-group">
+                        <strong class="party-name">{{ party_a.name }}</strong>
+                        <span class="party-desc">{{ party_a.description }}</span>
+                    </div>
+                    <span class="tone-chip {{ party_a.tone }}">{{ party_a.tone }}</span>
+                </div>
+                <div class="favorability-track">
+                    <div class="fav-marker" style="left: {{ party_a.marker_pct }}%;"></div>
+                    <span class="fav-label-left">Unfavorable</span>
+                    <span class="fav-label-right">Favorable</span>
+                </div>
+                <p class="party-portrayal">{{ party_a.portrayal }}</p>
+            </div>
+
+            <!-- Party B -->
+            <div class="party-block party-b-block">
+                <div class="party-top">
+                    <div class="party-name-group">
+                        <strong class="party-name">{{ party_b.name }}</strong>
+                        <span class="party-desc">{{ party_b.description }}</span>
+                    </div>
+                    <span class="tone-chip {{ party_b.tone }}">{{ party_b.tone }}</span>
+                </div>
+                <div class="favorability-track">
+                    <div class="fav-marker" style="left: {{ party_b.marker_pct }}%;"></div>
+                    <span class="fav-label-left">Unfavorable</span>
+                    <span class="fav-label-right">Favorable</span>
+                </div>
+                <p class="party-portrayal">{{ party_b.portrayal }}</p>
+            </div>
+
+            <!-- Bilateral spectrum bar -->
+            <div class="spectrum-wrapper">
+                <p class="ai-block-label" style="margin-bottom:12px;">Bias Spectrum</p>
+                <div class="spectrum-ends">
+                    <span class="spectrum-end-a">← {{ party_a.name }}</span>
+                    <span class="spectrum-end-b">{{ party_b.name }} →</span>
+                </div>
+                <div class="spectrum-track">
+                    <div class="spectrum-marker" style="left: {{ ai.spectrum_pct }}%;"></div>
+                </div>
+                <div class="spectrum-legend">
+                    <span>Favors this side</span>
+                    <span>Neutral</span>
+                    <span>Favors this side</span>
+                </div>
+            </div>
+
+            <!-- Bias verdict -->
+            {% if ai.favored_party %}
+            <div class="bias-verdict">
+                <div class="verdict-top">
+                    <span class="verdict-eyebrow">Article favors</span>
+                    <strong class="verdict-party">{{ ai.favored_party }}</strong>
+                </div>
+                {% if ai.bias_explanation %}
+                <p class="verdict-explanation">{{ ai.bias_explanation }}</p>
+                {% endif %}
+            </div>
+            {% else %}
+            <div class="bias-verdict neutral-verdict">
+                <strong>Coverage appears relatively balanced</strong>
+            </div>
+            {% endif %}
+
+        </div>
+        {% endif %}
+
+        <!-- Attributed framing quotes -->
+        {% if ai.attributed_quotes %}
+        <div class="attributed-quotes">
+            <p class="ai-block-label">Framing Quotes by Party</p>
+            {% for aq in ai.attributed_quotes %}
+            <div class="attributed-quote-item">
+                <div class="aq-meta">
+                    <span class="aq-party">{{ aq.party }}</span>
+                    <span class="impact-chip {{ aq.impact }}">{{ aq.impact }}</span>
+                </div>
+                <blockquote class="framing-quote">"{{ aq.quote }}"</blockquote>
+                <p class="quote-analysis">{{ aq.explanation }}</p>
+            </div>
+            {% endfor %}
+        </div>
+        {% endif %}
+
+    </section>
+    {% endif %}
+
+    <!-- ── VADER (compact secondary metric) ────────── -->
+    <details class="vader-details">
+        <summary>
+            VADER Sentiment Score
+            <span class="vader-summary-score {{ article.sentiment.label | lower }}">
+                {{ article.sentiment.compound }}
+            </span>
+        </summary>
+        <div class="vader-breakdown">
+            <div class="breakdown-item positive-item">
+                <strong>{{ article.sentiment.positive }}%</strong>
+                <span>Positive</span>
+            </div>
+            <div class="breakdown-item neutral-item">
+                <strong>{{ article.sentiment.neutral }}%</strong>
+                <span>Neutral</span>
+            </div>
+            <div class="breakdown-item negative-item">
+                <strong>{{ article.sentiment.negative }}%</strong>
+                <span>Negative</span>
+            </div>
+        </div>
+    </details>
+
+    <!-- ── Word Stats ───────────────────────────────── -->
+    <div class="mini-stats" style="margin-top:18px;">
         <div>
             <span>Total words</span>
             <strong>{{ article.framing.total_words }}</strong>
@@ -17,29 +157,31 @@
             <strong>{{ article.framing.total_framing_words }}</strong>
         </div>
         <div>
-            <span>Negative ratio</span>
+            <span>Framing ratio</span>
             <strong>{{ article.framing.negative_ratio }}%</strong>
         </div>
     </div>
 
-    <h3>Repeated Terms</h3>
+    <!-- ── Most Repeated Terms ──────────────────────── -->
+    <h3 class="section-subhead">Most Repeated Terms</h3>
     {% if article.common_words %}
         <div class="bar-list">
             {% for word, count in article.common_words %}
                 <div class="bar-row">
                     <span>{{ word }}</span>
                     <div class="bar-track">
-                        <div class="bar-fill" style="width: {{ count * 12 }}px"></div>
+                        <div class="bar-fill" style="width: {{ [count * 14, 260] | min }}px"></div>
                     </div>
                     <strong>{{ count }}</strong>
                 </div>
             {% endfor %}
         </div>
     {% else %}
-        <p>No common words found.</p>
+        <p class="muted-note">No common words found.</p>
     {% endif %}
 
-    <h3>Detected Framing Words</h3>
+    <!-- ── Detected Framing Words ───────────────────── -->
+    <h3 class="section-subhead">Detected Framing Words</h3>
     {% if article.framing.common_framing_words %}
         <div class="tag-list">
             {% for word, count in article.framing.common_framing_words %}
@@ -47,6 +189,33 @@
             {% endfor %}
         </div>
     {% else %}
-        <p>No words from the current framing list were found.</p>
+        <p class="muted-note">No words from the current framing list were found.</p>
     {% endif %}
+
+    <!-- ── Save to collection ──────────────────────── -->
+    <div class="save-to-collection">
+        <form class="save-form" method="post" action="{{ url_for('save_article') }}">
+            <input type="hidden" name="title"              value="{{ article.title }}">
+            <input type="hidden" name="source"             value="{{ article.source }}">
+            <input type="hidden" name="sentiment_compound" value="{{ article.sentiment.compound }}">
+            <input type="hidden" name="sentiment_label"    value="{{ article.sentiment.label }}">
+            <input type="hidden" name="framing_ratio"      value="{{ article.framing.negative_ratio }}">
+            <input type="hidden" name="ai_analysis_json"   value="{{ article.ai_analysis | tojson if article.ai_analysis else '' }}">
+
+            <div class="save-row">
+                <label for="save-tags-{{ article.title | replace(' ', '-') }}" class="save-label">
+                    Save to collection
+                </label>
+                <input
+                    id="save-tags-{{ article.title | replace(' ', '-') }}"
+                    class="save-tags-input"
+                    type="text"
+                    name="tags"
+                    placeholder="Add tags, comma-separated  (e.g. gaza, ukraine)"
+                    autocomplete="off">
+                <button class="save-btn" type="submit">Save</button>
+            </div>
+        </form>
+    </div>
+
 </article>

@@ -4,7 +4,7 @@
 <section class="page-heading">
     <p class="eyebrow">Source Collection</p>
     <h1>Search free article sources</h1>
-    <p>Search GDELT by topic and source. If automatic article text fetching fails, open the link and paste the text on the analysis page.</p>
+    <p>Search GDELT by topic and source. Once text is fetched, load it directly into the analysis page in one click.</p>
 </section>
 
 {% if error %}
@@ -44,7 +44,9 @@
                 <input type="hidden" name="source" value="{{ selected_source }}">
                 <input type="hidden" name="search_text" value="{{ search_text }}">
                 <input type="hidden" name="article_url" value="{{ article.url }}">
-                <button type="submit">Try to fetch text</button>
+                <input type="hidden" name="article_title" value="{{ article.title }}">
+                <input type="hidden" name="article_domain" value="{{ article.domain }}">
+                <button type="submit">Fetch text</button>
             </form>
         </article>
     {% endfor %}
@@ -52,9 +54,30 @@
 {% endif %}
 
 {% if fetched_text %}
-<section class="fetched-text">
-    <h2>Fetched article text</h2>
-    <p><a href="{{ fetched_url }}" target="_blank" rel="noreferrer">Original article</a></p>
+<section class="fetched-text dashboard-section">
+    <div class="fetched-header">
+        <div>
+            <h2>Fetched article text</h2>
+            <p><a href="{{ fetched_url }}" target="_blank" rel="noreferrer">{{ fetched_title or fetched_url }}</a>
+            {% if fetched_domain %} — {{ fetched_domain }}{% endif %}</p>
+        </div>
+        <div class="load-buttons">
+            <form method="post" action="{{ url_for('load_article') }}">
+                <input type="hidden" name="slot" value="a">
+                <input type="hidden" name="title" value="{{ fetched_title }}">
+                <input type="hidden" name="source" value="{{ fetched_domain }}">
+                <input type="hidden" name="text" value="{{ fetched_text }}">
+                <button type="submit" class="load-btn">Load as Article A</button>
+            </form>
+            <form method="post" action="{{ url_for('load_article') }}">
+                <input type="hidden" name="slot" value="b">
+                <input type="hidden" name="title" value="{{ fetched_title }}">
+                <input type="hidden" name="source" value="{{ fetched_domain }}">
+                <input type="hidden" name="text" value="{{ fetched_text }}">
+                <button type="submit" class="load-btn load-btn-b">Load as Article B</button>
+            </form>
+        </div>
+    </div>
     <textarea readonly>{{ fetched_text }}</textarea>
 </section>
 {% endif %}
